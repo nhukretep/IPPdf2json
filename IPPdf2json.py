@@ -56,7 +56,7 @@ device = PDFPageAggregator(rsrcmgr, laparams=laparams)
 
 interpreter = PDFPageInterpreter(rsrcmgr, device)
 
-categories = {}
+menu = {}
 
 def parse_obj(lt_objs):
     result = []
@@ -84,55 +84,59 @@ data = parse_obj(layout._objs)
 
 
 ### Sort text into json ###
-category = ''
 
 # Set horizontal ranges for location of columns
-range_min = [110, 250, 390, 540, 686]
-range_max = [249, 389, 539, 685, 816]
+lon_min = [110, 250, 390, 538, 686]
+lon_max = [249, 389, 537, 685, 816]
 
-isCategory = False
-x = 0
-price_index = 0
+# Set vertical ranges for location of rows
+lat_min = [230, 165, 85, 20]
+lat_max = [310, 229, 164, 84]
+
+categories = ['Veggie','Traditionelle Küche','Internationale Küche','Specials']
+
+for category in categories:
+    menu[category] = []
+
+    for k in range(0,5): 
+        menu[category].append({
+            'meal': "",
+            'price': None,
+            'x': "",
+            'y': ""
+            })
 
 for entry in data:
+    category = ""
+    weekday = None
     text = entry['text']
-    if text == 'Veggie' or\
-       text == 'Traditionelle Küche' or\
-       text == 'Internationale Küche' or\
-       text == 'Specials':
-        category = text
-        categories[category] = []
+    lon = entry['x']
+    lat = entry['y']
+    
+    for i in range(0,4):
 
-        for k in range(0,5): 
-            categories[category].append({
-                'meal': "",
-                'price': None,
-                'x': ""
-                })
+        if (lat_min[i] < lat < lat_max[i]):
 
-        price_index = 0
-        isCategory = True
-        x = entry['x']
-        continue
-
-    if x == 0:
-        continue
-
-    if '€' in text:
-        
-        categories[category][price_index]['price'] = text
-        price_index += 1
-        continue
+            category = categories[i]
 
     for i in range(0,5):
 
-        if (range_min[i] < entry['x'] < range_max[i]):
+        if (lon_min[i] < entry['x'] < lon_max[i]):
+            
+            weekday = i
 
-            categories[category][i]['meal'] += " " + text
-            categories[category][i]['x'] += " " + str(entry['x'])
+    if text == '0':
+        continue
 
-    x = entry['x']
+    if (category != "" and weekday != None and '€' in text):
+        menu[category][weekday]['price'] = text
+        continue
+
+    if (category != "" and weekday != None):
+        menu[category][weekday]['meal'] += " " + text
+        menu[category][weekday]['x'] += " " + str(lon)
+        menu[category][weekday]['y'] += " " + str(lat)
 
 with open('menu.json', 'w') as outfile:
-    json.dump(categories, outfile)
+    json.dump(menu, outfile)
 
